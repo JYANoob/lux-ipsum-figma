@@ -1,0 +1,244 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lux Ipsum</title>
+<style>
+*{box-sizing:border-box}
+:root{color-scheme:light dark}
+body{margin:0;padding:18px;font:13px Inter,-apple-system,BlinkMacSystemFont,sans-serif;background:var(--figma-color-bg,#fff);color:var(--figma-color-text,#222); }
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.brand{font-size:20px;font-weight:750;letter-spacing:-.7px}
+.tag{font-size:10px;color:var(--figma-color-text-secondary,#888);border:1px solid var(--figma-color-border,#ddd);border-radius:20px;padding:5px 8px}
+.sub{color:var(--figma-color-text-secondary,#888);font-size:12px;line-height:1.5;margin:0 0 18px}
+label{display:block;font-weight:650;margin:13px 0 7px}
+select,input,textarea{width:100%;border:1px solid var(--figma-color-border,#ddd);border-radius:9px;padding:10px;background:var(--figma-color-bg-secondary,#f5f5f5);color:var(--figma-color-text,#222);font:inherit;outline:none}
+textarea{resize:vertical;min-height:68px;line-height:1.5}
+select:focus,input:focus,textarea:focus{border-color:var(--figma-color-border-selected,#777)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.selection{padding:11px;border:1px solid var(--figma-color-border,#ddd);border-radius:11px;background:var(--figma-color-bg-secondary,#f7f7f7);margin:14px 0}
+.selection strong{display:block;font-size:12px;margin-bottom:4px}
+.selection span{font-size:11px;color:var(--figma-color-text-secondary,#888);line-height:1.5}
+.small{font-size:11px;color:var(--figma-color-text-secondary,#888);line-height:1.5;margin-top:6px}
+button{width:100%;border:0;border-radius:10px;padding:12px;font:inherit;font-weight:700;cursor:pointer}
+.primary{background:var(--figma-color-bg-brand,#18a058);color:var(--figma-color-text-onbrand,#fff);margin-top:15px}
+.primary:hover{filter:brightness(1.06)}
+.secondary{background:var(--figma-color-bg-secondary,#eee);color:var(--figma-color-text,#222);border:1px solid var(--figma-color-border,#ddd);margin-top:8px}
+.status{min-height:32px;font-size:12px;line-height:1.5;color:var(--figma-color-text-secondary,#888);padding-top:10px}
+.footer{border-top:1px solid var(--figma-color-border,#ddd);margin-top:15px;padding-top:12px;font-size:10px;line-height:1.5;color:var(--figma-color-text-tertiary,#999)}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">✦ Lux Ipsum</div>
+  <span class="tag">FIGMA PLUGIN</span>
+</header>
+<p class="sub">Generate placeholder text directly in your design. Select text layers to replace them, or generate a new layer.</p>
+
+<div class="selection">
+  <strong id="selectionTitle">Checking selection…</strong>
+  <span id="selectionDetail">Select one or more text layers on your canvas.</span>
+</div>
+
+<div class="grid">
+  <div>
+    <label for="mode">Generation type</label>
+    <select id="mode">
+      <option value="words">Words</option>
+      <option value="sentences">Sentences</option>
+      <option value="paragraphs">Paragraphs</option>
+      <option value="lists">List items</option>
+      <option value="bytes">Approx. bytes</option>
+    </select>
+  </div>
+  <div>
+    <label for="amount" id="amountLabel">Word count</label>
+    <input id="amount" type="number" min="1" max="2000" value="50">
+  </div>
+</div>
+
+<label for="wordSet">Vocabulary</label>
+<select id="wordSet">
+  <option value="classic">Classic Lorem</option>
+  <option value="cyber">Cyber</option>
+  <option value="science">Scientific</option>
+  <option value="fantasy">Fantasy</option>
+  <option value="space">Cosmic</option>
+  <option value="medieval">Medieval</option>
+  <option value="custom">Custom words</option>
+</select>
+
+<div id="customArea" hidden>
+  <label for="customWords">Your vocabulary</label>
+  <textarea id="customWords" placeholder="Enter words separated by commas or new lines"></textarea>
+  <div class="small">These words are used for this session. Persistent custom-pool management comes in a later build.</div>
+</div>
+
+<label for="caseMode">Capitalization</label>
+<select id="caseMode">
+  <option value="normal">Normal</option>
+  <option value="lower">lowercase</option>
+  <option value="upper">UPPERCASE</option>
+  <option value="title">Title Case</option>
+</select>
+
+<button class="primary" id="generate">Generate & Apply</button>
+<button class="secondary" id="cancel">Close Plugin</button>
+<div class="status" id="status" role="status">Ready.</div>
+
+<div class="footer">
+  Lux Ipsum for Figma · Local text generation · Review your layout after replacing text.
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+const BANKS = {
+  classic: "lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua enim ad minim veniam quis nostrud exercitation ullamco laboris nisi aliquip ex ea commodo consequat duis aute irure reprehenderit voluptate velit esse cillum fugiat nulla pariatur".split(" "),
+  cyber: "neural quantum digital synthetic cybernetic algorithm protocol circuit network data matrix signal virtual render system interface encrypted processor machine learning".split(" "),
+  science: "molecule isotope catalyst protein enzyme atomic orbital plasma polymer isotope kinetic thermal cellular genetic quantum laboratory spectrum".split(" "),
+  fantasy: "ancient mystic arcane dragon crystal kingdom rune enchanted shadow ember celestial sorcerer spellbound realm eternal prophecy phoenix".split(" "),
+  space: "nebula cosmic stellar galaxy orbital lunar solar interstellar pulsar quasar asteroid celestial vacuum constellation supernova exoplanet".split(" "),
+  medieval: "kingdom castle knight heraldic crown throne sovereign noble court banner guild fortress scribe parchment dynasty royal".split(" ")
+};
+
+let selectedTextCount = 0;
+
+function post(message) {
+  parent.postMessage({ pluginMessage: message }, "*");
+}
+
+function randomWord(words) {
+  return words[Math.floor(Math.random() * words.length)] || "lorem";
+}
+
+function getWords() {
+  if ($("wordSet").value === "custom") {
+    const custom = $("customWords").value
+      .split(/[\s,;]+/)
+      .map(word => word.trim())
+      .filter(Boolean);
+    return custom;
+  }
+  return BANKS[$("wordSet").value] || BANKS.classic;
+}
+
+function sentence(words) {
+  const count = 7 + Math.floor(Math.random() * 11);
+  const result = [];
+  for (let i = 0; i < count; i++) result.push(randomWord(words));
+  result[0] = result[0].charAt(0).toUpperCase() + result[0].slice(1);
+  return result.join(" ") + ".";
+}
+
+function generateText(words) {
+  const mode = $("mode").value;
+  const amount = Math.max(1, Math.min(
+    mode === "bytes" ? 50000 : mode === "paragraphs" ? 50 : 2000,
+    Math.floor(Number($("amount").value) || 1)
+  ));
+
+  let output = "";
+
+  if (mode === "words") {
+    output = Array.from({ length: amount }, () => randomWord(words)).join(" ");
+  } else if (mode === "sentences") {
+    output = Array.from({ length: amount }, () => sentence(words)).join(" ");
+  } else if (mode === "paragraphs") {
+    output = Array.from({ length: amount }, () =>
+      Array.from({ length: 3 }, () => sentence(words)).join(" ")
+    ).join("\n\n");
+  } else if (mode === "lists") {
+    output = Array.from({ length: amount }, (_, i) =>
+      `${i + 1}. ${sentence(words)}`
+    ).join("\n");
+  } else {
+    while (new TextEncoder().encode(output).length < amount) {
+      output += (output ? " " : "") + sentence(words);
+    }
+    output = output.slice(0, amount);
+  }
+
+  const casing = $("caseMode").value;
+  if (casing === "lower") output = output.toLowerCase();
+  if (casing === "upper") output = output.toUpperCase();
+  if (casing === "title") {
+    output = output.replace(/\b\w/g, char => char.toUpperCase());
+  }
+
+  return output;
+}
+
+function updateMode() {
+  const mode = $("mode").value;
+  const labels = {
+    words: "Word count",
+    sentences: "Sentence count",
+    paragraphs: "Paragraph count",
+    lists: "List item count",
+    bytes: "Target byte count"
+  };
+  const limits = {
+    words: 2000,
+    sentences: 500,
+    paragraphs: 50,
+    lists: 500,
+    bytes: 50000
+  };
+  $("amountLabel").textContent = labels[mode];
+  $("amount").max = limits[mode];
+  $("amount").value = Math.min(
+    Number($("amount").value) || 1,
+    limits[mode]
+  );
+}
+
+$("mode").addEventListener("change", updateMode);
+$("wordSet").addEventListener("change", () => {
+  $("customArea").hidden = $("wordSet").value !== "custom";
+});
+
+$("generate").addEventListener("click", () => {
+  const words = getWords();
+
+  if (!words.length) {
+    $("status").textContent = "Add some custom words first.";
+    return;
+  }
+
+  const total = Math.max(1, selectedTextCount);
+  const texts = Array.from({ length: total }, () => generateText(words));
+
+  $("status").textContent = "Applying generated text…";
+  $("generate").disabled = true;
+  post({ type: "generate", texts });
+});
+
+$("cancel").addEventListener("click", () => post({ type: "cancel" }));
+
+window.onmessage = event => {
+  const message = event.data && event.data.pluginMessage;
+  if (!message) return;
+
+  if (message.type === "selection") {
+    selectedTextCount = message.textCount || 0;
+    $("selectionTitle").textContent = selectedTextCount
+      ? `${selectedTextCount} text layer${selectedTextCount === 1 ? "" : "s"} selected`
+      : "No text layers selected";
+
+    $("selectionDetail").textContent = selectedTextCount
+      ? (message.names || []).join(", ") || "Ready to replace selected text."
+      : "Generate & Apply will create a new text layer.";
+
+  } else if (message.type === "status") {
+    $("status").textContent = message.message;
+    $("generate").disabled = false;
+  }
+};
+
+updateMode();
+</script>
+</body>
+</html>
